@@ -1,0 +1,5 @@
+# ignore
+.conda
+dist
+
+src/*.egg-info
