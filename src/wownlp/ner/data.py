@@ -1,5 +1,7 @@
-from typing import Tuple
-
+import json
+import os
+from typing import Any, Dict, List, Tuple, Union
+from tqdm import tqdm
 
 def read_conll(fp: str, label_delimiter:str = "-", encoding:str='utf-8'):
     """
@@ -137,4 +139,36 @@ def read_weibo(fp:str, label_delimiter:str = "-", encoding:str='utf-8'):
     return sentences, entity_type_set
 
 
+def save_jsonl(fp: str, data: List[Any], encoding='utf-8'):
+    """
+    Save as jsonl file.
+
+    Args:
+        fp (str): The filename
+        data (List[Any]): The list of data
+    """
+    dirname = os.path.dirname(fp)
+    os.makedirs(dirname, exist_ok=True)
+    with open(fp,"w", encoding=encoding) as f:
+        for item in data:
+            f.write(json.dumps(item, ensure_ascii=False))
+            f.write('\n')
+            f.flush()
+            
+def save_labels(fp: str, data: List[str], encoding='utf-8'):
+    """
+    Save labels as plaintext.
+
+    Args:
+        fp (str): The filename
+        data (List[str]): Labels
+        encoding (str, optional): The encoding of file. Defaults to 'utf-8'.
+    """ 
+    dirname = os.path.dirname(fp)
+    os.makedirs(dirname, exist_ok=True)
+    with open(fp, "w", encoding=encoding) as f:
+        for item in data:
+            f.write(item)
+            f.write('\n')
+            f.flush()
 

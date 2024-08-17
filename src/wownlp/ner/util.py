@@ -1,5 +1,107 @@
-from typing import List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Union
 
+from tqdm import tqdm
+
+class LabelTokenizer():
+    
+    def __init__(self, filename: str=None) -> None:
+        self.idx2label: List[str] = []
+        self.label2idx: Dict[str, int] = {}
+        if filename is not None:
+            with open(filename, 'r') as f:
+                for idx, line in tqdm(enumerate(f), desc=f'Loading labels from {filename}'):
+                    self.idx2label.append(line.strip())
+                    self.label2idx[line.strip()] = idx  
+                    self.__make_o_first()
+                    
+    def __make_o_first(self):
+        if "O" in self.label2idx:
+            # find O idx
+            idx = self.label2idx["O"]
+            # swap with first label
+            self.label2idx[self.idx2label[0]], self.label2idx["O"] = self.label2idx["O"], self.label2idx[self.idx2label[0]]
+            self.idx2label[0],self.idx2label[idx] = self.idx2label[idx], self.idx2label[0]
+                    
+    def load(self, labels: List[str], sort=True):
+        if sort:
+            labels = list(labels)
+            labels.sort()
+        for label in labels:
+            self.idx2label.append(label)
+        for idx, label in enumerate(self.idx2label):
+            self.label2idx[label] = idx
+        self.__make_o_first()
+        return self
+    
+    def remove(self, index: int):
+        label = self.idx2label[index]
+        self.idx2label.remove(label)
+        self.label2idx = {}
+        for idx, label in enumerate(self.idx2label):
+            self.label2idx[label] = idx
+        return self
+    
+    def add(self, item, index=-1):
+        if index!=-1:
+            self.idx2label.insert(index, item)
+        else:
+            self.idx2label.append(item)
+        for idx, label in enumerate(self.idx2label):
+            self.label2idx[label] = idx
+        return self
+    
+    def convert_tokens_to_ids(self, label: Union[str, List[str]]) -> int:
+        if isinstance(label, list):
+            return [self.label2idx[l] for l in label]
+        return self.label2idx[label]
+    
+    def convert_ids_to_tokens(self, idx: Union[int, List[int]]) -> int:
+        if isinstance(idx, list):
+            return [self.idx2label[i] for i in idx]
+        return self.idx2label[idx]
+    
+    def __len__(self):
+        return len(self.idx2label)
+    
+class HashTrie():
+    
+    def __init__(self) -> None:
+        self.trie = set()
+        self.max_length = 0
+        
+    def load_vocab_from_file(self, filename: str):
+        with open(filename, 'r') as f:
+            for line in tqdm(f, desc='Loading vocab'):
+                self.trie.add(line.strip())
+                self.max_length = max(self.max_length, len(line.strip()))
+                
+    def __add__(self, word):
+        self.trie.add(word)
+        self.max_length = max(self.max_length, len(word))
+        return self
+                
+    def search_words(self, sentence: str, words_number:int=5, return_list=True):
+        if return_list:
+            words = []
+        else:
+            words = set()
+        for start in range(len(sentence)):
+            if return_list:
+                words.append([])
+            s = ""
+            for end in range(start, min(start+self.max_length, len(sentence))):
+                s += sentence[end]
+                if s in self.trie:
+                    if return_list:
+                        words[-1].append(s)
+                        if len(words[-1])>=words_number:
+                            break
+                    else:
+                        words.add(s)
+        return words
+    
+    def __len__(self):
+        return len(self.trie)
 
 def is_span_intersect(a: Tuple[int,int], b: Tuple[int,int]):
     """
